@@ -17,6 +17,7 @@ type TabixManager struct {
 	dataMap  map[string]*bix.Bix
 	dbname   string
 	valueMap map[string]map[string]interface{} //LONG LABELS
+	subdir   string
 }
 
 type loc struct {
@@ -82,7 +83,7 @@ func (m *TabixManager) List() []string {
 }
 
 func (T *TabixManager) ServeTo(router *mux.Router) {
-	prefix := "/" + T.dbname
+	prefix := T.subdir + "/" + T.dbname
 	router.HandleFunc(prefix+"/list", func(w http.ResponseWriter, r *http.Request) {
 		a := make([]map[string]string, 0)
 		attr, ok := r.URL.Query()["attr"]
@@ -160,7 +161,7 @@ func (T *TabixManager) ServeTo(router *mux.Router) {
 	})
 }
 
-func NewTabixManager(uri string, dbname string) *TabixManager {
+func NewTabixManager(subdir string, uri string, dbname string) *TabixManager {
 	uriMap := loadURI(uri)
 	dataMap := make(map[string]*bix.Bix)
 	valueMap := make(map[string]map[string]interface{})
@@ -178,12 +179,13 @@ func NewTabixManager(uri string, dbname string) *TabixManager {
 		dataMap,
 		dbname,
 		valueMap,
+		subdir,
 	}
 	//m.ServeTo(router)
 	return &m
 }
 
-func InitTabixManager(dbname string) *TabixManager {
+func InitTabixManager(subdir string, dbname string) *TabixManager {
 	uriMap := make(map[string]string)
 	dataMap := make(map[string]*bix.Bix)
 	valueMap := make(map[string]map[string]interface{})
@@ -192,6 +194,7 @@ func InitTabixManager(dbname string) *TabixManager {
 		dataMap,
 		dbname,
 		valueMap,
+		subdir,
 	}
 	return &m
 }

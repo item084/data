@@ -21,6 +21,7 @@ type BigBedManager struct {
 	dbname    string
 	indexRoot string
 	valueMap  map[string]map[string]interface{}
+	subdir    string
 }
 
 func (m *BigBedManager) readBw(uri string) (*bbi.BigBedReader, error) {
@@ -134,7 +135,7 @@ func (m *BigBedManager) List() []string {
 }
 
 func (m *BigBedManager) ServeTo(router *mux.Router) {
-	prefix := "/" + m.dbname
+	prefix := m.subdir + "/" + m.dbname
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
 
@@ -216,7 +217,7 @@ func (m *BigBedManager) ServeTo(router *mux.Router) {
 
 }
 
-func NewBigBedManager(uri string, dbname string, root string) *BigBedManager {
+func NewBigBedManager(subdir string, uri string, dbname string, root string) *BigBedManager {
 	uriMap := loadURI(uri)
 	dataMap := make(map[string]*bbi.BigBedReader)
 	valueMap := make(map[string]map[string]interface{})
@@ -227,6 +228,7 @@ func NewBigBedManager(uri string, dbname string, root string) *BigBedManager {
 		dbname,
 		root,
 		valueMap,
+		subdir,
 	}
 	for k, v := range uriMap {
 		m.AddURI(v, k)
@@ -237,7 +239,7 @@ func NewBigBedManager(uri string, dbname string, root string) *BigBedManager {
 	return &m
 }
 
-func InitBigBedManager(dbname string, root string) *BigBedManager {
+func InitBigBedManager(subdir string, dbname string, root string) *BigBedManager {
 	uriMap := make(map[string]string)
 	dataMap := make(map[string]*bbi.BigBedReader)
 	valueMap := make(map[string]map[string]interface{})
@@ -247,6 +249,7 @@ func InitBigBedManager(dbname string, root string) *BigBedManager {
 		dbname,
 		root,
 		valueMap,
+		subdir,
 	}
 	return &m
 }

@@ -65,7 +65,7 @@ func (m *Loader) refreshIndexURI(uri string) error {
 func SaveIndex(uri string, root string) error {
 	h1, _ := regexp.Compile("^http://")
 	h2, _ := regexp.Compile("^https://")
-	m := NewLoader(root)
+	m := NewLoader("", root)
 	d, err := m.smartParseURI(uri)
 	if err != nil {
 		return err
@@ -171,17 +171,17 @@ func (m *Loader) loadIndexesTo(indexes []dataIndex, router *mux.Router) error {
 			}
 		}
 	}
-	router.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(m.subdir + "/list", func(w http.ResponseWriter, r *http.Request) {
 		e, _ := json.Marshal(m.entry)
 
 		w.Write(e)
 	})
-	router.HandleFunc("/ls", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(m.subdir + "/ls", func(w http.ResponseWriter, r *http.Request) {
 		e, _ := json.Marshal(m.jdata)
 
 		w.Write(e)
 	})
-	router.HandleFunc("/genomes", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(m.subdir + "/genomes", func(w http.ResponseWriter, r *http.Request) {
 		g := []string{}
 		for k, _ := range gs {
 			g = append(g, k)
@@ -191,7 +191,7 @@ func (m *Loader) loadIndexesTo(indexes []dataIndex, router *mux.Router) error {
 		w.Write(e)
 	})
 
-	router.HandleFunc("/{genome}/ls", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(m.subdir + "/{genome}/ls", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		k := vars["genome"]
 		if e, ok := m.gdb[k]; ok {
@@ -201,7 +201,7 @@ func (m *Loader) loadIndexesTo(indexes []dataIndex, router *mux.Router) error {
 			w.Write([]byte("[]"))
 		}
 	})
-	router.HandleFunc("/{genome}/list", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(m.subdir + "/{genome}/list", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		k := vars["genome"]
 		if v, ok := gs[k]; ok {
@@ -264,5 +264,5 @@ func (m *Loader) loadData(dbname string, data interface{}, format string) (DataR
 	if f == nil {
 		return nil, errors.New("format not support")
 	}
-	return f(dbname, data)
+	return f(m.subdir, dbname, data)
 }

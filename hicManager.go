@@ -16,6 +16,7 @@ type HicManager struct {
 	dataMap  map[string]*hic.HiC
 	dbname   string
 	valueMap map[string]map[string]interface{}
+	subdir   string
 }
 
 func (m *HicManager) SetAttr(key string, value map[string]interface{}) error {
@@ -70,7 +71,7 @@ func (m *HicManager) List() []string {
 	return keys
 }
 func (m *HicManager) ServeTo(router *mux.Router) {
-	prefix := "/" + m.dbname
+	prefix := m.subdir + "/" + m.dbname
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/ls", func(w http.ResponseWriter, r *http.Request) {
 		attr, ok := r.URL.Query()["attr"]
@@ -83,10 +84,10 @@ func (m *HicManager) ServeTo(router *mux.Router) {
 			w.Write(jsonAttr)
 		}
 	})
-	addHicsHandle(sub, m.dataMap)
+	addHicsHandle(m.subdir, sub, m.dataMap)
 }
 
-func NewHicManager(uri string, dbname string) *HicManager {
+func NewHicManager(subdir string, uri string, dbname string) *HicManager {
 	uriMap := loadURI(uri)
 	dataMap := make(map[string]*hic.HiC)
 	valueMap := make(map[string]map[string]interface{})
@@ -107,11 +108,12 @@ func NewHicManager(uri string, dbname string) *HicManager {
 		dataMap,
 		dbname,
 		valueMap,
+		subdir,
 	}
 	//m.ServeTo(router)
 	return &m
 }
-func InitHicManager(dbname string) *HicManager {
+func InitHicManager(subdir string, dbname string) *HicManager {
 	uriMap := make(map[string]string)
 	dataMap := make(map[string]*hic.HiC)
 	valueMap := make(map[string]map[string]interface{})
@@ -120,6 +122,7 @@ func InitHicManager(dbname string) *HicManager {
 		dataMap,
 		dbname,
 		valueMap,
+		subdir,
 	}
 	return &m
 }

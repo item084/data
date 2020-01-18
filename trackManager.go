@@ -17,17 +17,18 @@ type TrackManager struct {
 	formatMap map[string]string
 	managers  map[string]Manager
 	root      string
+	subdir    string
 }
 
-func NewTrackManager(uri string, dbname string, root string) *TrackManager {
-	m := InitTrackManager(dbname, root)
+func NewTrackManager(subdir string, uri string, dbname string, root string) *TrackManager {
+	m := InitTrackManager(subdir, dbname, root)
 	uriMap := loadURI(uri)
 	for k, v := range uriMap {
 		m.AddURI(v, k)
 	}
 	return m
 }
-func InitTrackManager(dbname string, root string) *TrackManager {
+func InitTrackManager(subdir string, dbname string, root string) *TrackManager {
 	uriMap := make(map[string]string)
 	formatMap := make(map[string]string)
 	dataMap := make(map[string]Manager)
@@ -37,21 +38,22 @@ func InitTrackManager(dbname string, root string) *TrackManager {
 		formatMap,
 		dataMap,
 		root,
+		subdir,
 	}
 	return &m
 }
-func _newManager(prefix string, format string, root string) Manager {
+func _newManager(subdir string, prefix string, format string, root string) Manager {
 	if format == "bigwig" {
-		return InitBigWigManager(prefix+".bigwig", root)
+		return InitBigWigManager(subdir, prefix+".bigwig", root)
 	}
 	if format == "bigbed" {
-		return InitBigBedManager(prefix+".bigbed", root)
+		return InitBigBedManager(subdir, prefix+".bigbed", root)
 	}
 	if format == "bigbedLarge" {
-		return InitBigBedManager(prefix+".bigbedLarge", root)
+		return InitBigBedManager(subdir, prefix+".bigbedLarge", root)
 	}
 	if format == "hic" {
-		return InitHicManager(prefix + ".hic")
+		return InitHicManager(subdir, prefix + ".hic")
 	}
 	/* obsoleted
 	if format == "image" {
@@ -77,7 +79,7 @@ func (m *TrackManager) Add(key string, reader io.ReadSeeker, uri string) error {
 	if format == "hic" || format == "bigwig" || format == "bigbed" {
 		reader.Seek(0, 0)
 		if _, ok := m.managers[format]; !ok {
-			m.managers[format] = _newManager(m.id, format, m.root)
+			m.managers[format] = _newManager(m.subdir, m.id, format, m.root)
 		}
 		m.managers[format].Add(key, reader, uri)
 		m.formatMap[key] = format
@@ -93,7 +95,7 @@ func (m *TrackManager) AddURI(uri string, key string) error {
 		return nil
 	}
 	if _, ok := m.managers[format]; !ok {
-		if _m := _newManager(m.id, format, m.root); _m != nil {
+		if _m := _newManager(m.subdir, m.id, format, m.root); _m != nil {
 			m.managers[format] = _m
 			m.managers[format].AddURI(uri, key)
 		} else {
@@ -122,7 +124,7 @@ func (m *TrackManager) ServeTo(router *mux.Router) {
 		v.ServeTo(router)
 	}
 
-	prefix := "/" + m.id
+	prefix := m.subdir + "/" + m.id
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/ls", func(w http.ResponseWriter, r *http.Request) {
 		attr, ok := r.URL.Query()["attr"]

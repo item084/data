@@ -15,6 +15,7 @@ type FileManager struct {
 	uri       map[string]string
 	dbname    string
 	bufferMap map[string][]byte
+	subdir    string
 }
 
 func (m *FileManager) AddURI(uri string, key string) error {
@@ -76,7 +77,7 @@ func (m *FileManager) Move(key1 string, key2 string) bool {
 }
 
 func (m *FileManager) initBuffersHandle(router *mux.Router) {
-	prefix := "/" + m.dbname
+	prefix := m.subdir + "/" + m.dbname
 	router.HandleFunc(prefix+"/list", func(w http.ResponseWriter, r *http.Request) {
 
 		keys := []string{}
@@ -111,24 +112,26 @@ func (m *FileManager) initBuffersHandle(router *mux.Router) {
 
 }
 
-func NewFileManager(uri string, dbname string) *FileManager {
+func NewFileManager(subdir string, uri string, dbname string) *FileManager {
 	uriMap := loadURI(uri)
 	bufferMap := make(map[string][]byte)
 	m := FileManager{
 		uriMap,
 		dbname,
 		bufferMap,
+		subdir,
 	}
 	return &m
 }
 
-func InitFileManager(dbname string) *FileManager {
+func InitFileManager(subdir string, dbname string) *FileManager {
 	uriMap := make(map[string]string)
 	bufferMap := make(map[string][]byte)
 	m := FileManager{
 		uriMap,
 		dbname,
 		bufferMap,
+		subdir, 
 	}
 	return &m
 }

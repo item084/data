@@ -10,6 +10,7 @@ import (
 type MapManager struct {
 	name string
 	data map[string]string
+	subdir string
 }
 
 func (m *MapManager) AddURI(uri string, key string) error {
@@ -40,7 +41,7 @@ func (m *MapManager) Move(key1 string, key2 string) bool {
 	return false
 }
 func (m *MapManager) ServeTo(router *mux.Router) {
-	prefix := "/" + m.name
+	prefix := m.subdir + "/" + m.name
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/ls", func(w http.ResponseWriter, r *http.Request) {
 
@@ -65,21 +66,23 @@ func (m *MapManager) ServeTo(router *mux.Router) {
 	})
 
 }
-func NewMapManager(uri string, name string) *MapManager {
+func NewMapManager(subdir string, uri string, name string) *MapManager {
 	data := loadURI(uri)
 	//d := make(map[string]string)
 	m := MapManager{
 		name,
 		data,
+		subdir,
 	}
 	return &m
 }
 
-func InitMapManager(name string) *MapManager {
+func InitMapManager(subdir string, name string) *MapManager {
 	data := make(map[string]string)
 	m := MapManager{
 		name,
 		data,
+		subdir,
 	}
 	return &m
 }

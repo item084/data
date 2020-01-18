@@ -54,6 +54,7 @@ type BigWigManager struct {
 	dbname    string
 	indexRoot string
 	valueMap  map[string]map[string]interface{} //LONG LABELS
+	subdir    string
 }
 
 func (m *BigWigManager) SetAttr(key string, value map[string]interface{}) error {
@@ -132,7 +133,7 @@ func (m *BigWigManager) List() []string {
 
 /* TODO ls Add Attr */
 func (m *BigWigManager) ServeTo(router *mux.Router) {
-	prefix := "/" + m.dbname
+	prefix := m.subdir + "/" + m.dbname
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/ls", func(w http.ResponseWriter, r *http.Request) {
 		attr, ok := r.URL.Query()["attr"]
@@ -150,7 +151,7 @@ func (m *BigWigManager) ServeTo(router *mux.Router) {
 	addBwsHandle(sub, m.bwMap)
 }
 
-func NewBigWigManager(uri string, dbname string, indexRoot string) *BigWigManager {
+func NewBigWigManager(subdir string, uri string, dbname string, indexRoot string) *BigWigManager {
 	//prefix := "/" + dbname
 	uriMap := loadURI(uri)
 	bwmap := make(map[string]*bbi.BigWigReader)
@@ -164,12 +165,13 @@ func NewBigWigManager(uri string, dbname string, indexRoot string) *BigWigManage
 		dbname,
 		indexRoot,
 		valueMap,
+		subdir,
 	}
 	//m.ServeTo(router)
 	return &m
 }
 
-func InitBigWigManager(dbname string, indexRoot string) *BigWigManager {
+func InitBigWigManager(subdir string, dbname string, indexRoot string) *BigWigManager {
 	uriMap := make(map[string]string)
 	bwMap := make(map[string]*bbi.BigWigReader)
 	valueMap := make(map[string]map[string]interface{})
@@ -179,6 +181,7 @@ func InitBigWigManager(dbname string, indexRoot string) *BigWigManager {
 		dbname,
 		indexRoot,
 		valueMap,
+		subdir,
 	}
 	return &m
 }

@@ -10,15 +10,16 @@ import (
 
 type Loader struct {
 	IndexRoot string
-	Plugins   map[string]func(string, interface{}) (DataRouter, error)
+	Plugins   map[string]func(string, string, interface{}) (DataRouter, error)
 	Data      map[string]DataRouter
 	entry     []string
 	jdata     []map[string]string
 	gdb       map[string][]map[string]string
+	subdir    string
 }
 
 var (
-	loaders = map[string]func(string, interface{}) (DataRouter, error){
+	loaders = map[string]func(string, string, interface{}) (DataRouter, error){
 		"file":  _fileLoader,
 		"hic":   _hicLoader,
 		"map":   _mapLoader,
@@ -26,7 +27,7 @@ var (
 	}
 )
 
-func (e *Loader) AddLoader(format string, f func(string, interface{}) (DataRouter, error)) error {
+func (e *Loader) AddLoader(format string, f func(string, string, interface{}) (DataRouter, error)) error {
 	//TODO
 	_, ok := loaders[format]
 	if ok || format == "bigwig" || format == "bigbed" || format == "track" {
@@ -35,11 +36,12 @@ func (e *Loader) AddLoader(format string, f func(string, interface{}) (DataRoute
 	e.Plugins[format] = f
 	return nil
 }
-func NewLoader(root string) *Loader {
-	return &Loader{root, make(map[string]func(string, interface{}) (DataRouter, error)), make(map[string]DataRouter), make([]string, 0, 0), make([]map[string]string, 0, 0), make(map[string][]map[string]string)}
+func NewLoader(subdir string, root string) *Loader {
+	// return &Loader{root, make(map[string]func(string, interface{}) (DataRouter, error)), make(map[string]DataRouter), make([]string, 0, 0), make([]map[string]string, 0, 0), make(map[string][]map[string]string)}
+	return &Loader{root, make(map[string]func(string, string, interface{}) (DataRouter, error)), make(map[string]DataRouter), make([]string, 0, 0), make([]map[string]string, 0, 0), make(map[string][]map[string]string), subdir}
 }
 
-func (e *Loader) Factory(dbname string, data interface{}, format string) func(string, interface{}) (DataRouter, error) {
+func (e *Loader) Factory(dbname string, data interface{}, format string) func(string, string, interface{}) (DataRouter, error) {
 	if f0, ok := e.Plugins[format]; ok {
 		return f0
 	}
@@ -48,15 +50,15 @@ func (e *Loader) Factory(dbname string, data interface{}, format string) func(st
 	}
 	switch format {
 	case "bigwig": //bigwig with buffer
-		return func(dbname string, data interface{}) (DataRouter, error) {
+		return func(subdir_ string, dbname string, data interface{}) (DataRouter, error) {
 			switch v := data.(type) {
 			default:
 				log.Printf("unexpected type %T\n", v)
 				return nil, errors.New(fmt.Sprintf("bigwig format not support type %T", v))
 			case string:
-				return NewBigWigManager(data.(string), dbname, e.IndexRoot), nil
+				return NewBigWigManager(subdir_, data.(string), dbname, e.IndexRoot), nil
 			case map[string]interface{}:
-				a := InitBigWigManager(dbname, e.IndexRoot)
+				a := InitBigWigManager(subdir_, dbname, e.IndexRoot)
 				for key, val := range data.(map[string]interface{}) {
 					switch val.(type) {
 					case string:
@@ -73,15 +75,15 @@ func (e *Loader) Factory(dbname string, data interface{}, format string) func(st
 			}
 		}
 	case "bigbed":
-		return func(dbname string, data interface{}) (DataRouter, error) {
+		return func(subdir_ string, dbname string, data interface{}) (DataRouter, error) {
 			switch v := data.(type) {
 			default:
 				fmt.Printf("unexpected type %T", v)
 				return nil, errors.New(fmt.Sprintf("bigwig format not support type %T", v))
 			case string:
-				return NewBigBedManager(data.(string), dbname, e.IndexRoot), nil
+				return NewBigBedManager(subdir_, data.(string), dbname, e.IndexRoot), nil
 			case map[string]interface{}:
-				a := InitBigBedManager(dbname, e.IndexRoot)
+				a := InitBigBedManager(subdir_, dbname, e.IndexRoot)
 				for key, val := range data.(map[string]interface{}) {
 					switch val.(type) {
 					case string:
@@ -99,15 +101,15 @@ func (e *Loader) Factory(dbname string, data interface{}, format string) func(st
 			}
 		}
 	case "track":
-		return func(dbname string, data interface{}) (DataRouter, error) {
+		return func(subdir_ string, dbname string, data interface{}) (DataRouter, error) {
 			switch v := data.(type) {
 			default:
 				log.Printf("unexpected type %T\n", v)
 				return nil, errors.New(fmt.Sprintf("bigwig format not support type %T", v))
 			case string:
-				return NewTrackManager(data.(string), dbname, e.IndexRoot), nil
+				return NewTrackManager(subdir_, data.(string), dbname, e.IndexRoot), nil
 			case map[string]interface{}:
-				a := InitTrackManager(dbname, e.IndexRoot)
+				a := InitTrackManager(subdir_, dbname, e.IndexRoot)
 				for key, val := range data.(map[string]interface{}) {
 					switch val.(type) {
 					case string:
@@ -129,15 +131,15 @@ func (e *Loader) Factory(dbname string, data interface{}, format string) func(st
 	return nil
 }
 
-func _fileLoader(dbname string, data interface{}) (DataRouter, error) {
+func _fileLoader(subdir string, dbname string, data interface{}) (DataRouter, error) {
 	switch v := data.(type) {
 	default:
 		return nil, errors.New(fmt.Sprintf("unexpected type %T", v))
 	case string:
 		log.Println("in file load string", data.(string))
-		return NewFileManager(data.(string), dbname), nil
+		return NewFileManager(subdir, data.(string), dbname), nil
 	case map[string]interface{}:
-		m := InitFileManager(dbname)
+		m := InitFileManager(subdir, dbname)
 		for k, v := range data.(map[string]interface{}) {
 			m.AddURI(v.(string), k)
 		}
@@ -145,15 +147,15 @@ func _fileLoader(dbname string, data interface{}) (DataRouter, error) {
 	}
 }
 
-func _hicLoader(dbname string, data interface{}) (DataRouter, error) {
+func _hicLoader(subdir string, dbname string, data interface{}) (DataRouter, error) {
 	switch v := data.(type) {
 	default:
 		log.Printf("unexpected type %T\n", v)
 		return nil, errors.New(fmt.Sprintf("hic format not support type %T", v))
 	case string:
-		return NewHicManager(data.(string), dbname), nil
+		return NewHicManager(subdir, data.(string), dbname), nil
 	case map[string]interface{}:
-		a := InitHicManager(dbname)
+		a := InitHicManager(subdir, dbname)
 		for key, val := range data.(map[string]interface{}) {
 			switch val.(type) {
 			case string:
@@ -169,30 +171,30 @@ func _hicLoader(dbname string, data interface{}) (DataRouter, error) {
 	}
 }
 
-func _mapLoader(dbname string, data interface{}) (DataRouter, error) {
+func _mapLoader(subdir string, dbname string, data interface{}) (DataRouter, error) {
 	switch v := data.(type) {
 	default:
 		log.Printf("unexpected type %T\n", v)
 		return nil, errors.New(fmt.Sprintf("map format not support type %T", v))
 	case string:
-		return NewMapManager(data.(string), dbname), nil
+		return NewMapManager(subdir, data.(string), dbname), nil
 	case map[string]interface{}:
-		a := InitMapManager(dbname)
+		a := InitMapManager(subdir, dbname)
 		for key, val := range data.(map[string]interface{}) {
 			a.AddURI(val.(string), key)
 		}
 		return a, nil
 	}
 }
-func _tabixLoader(dbname string, data interface{}) (DataRouter, error) {
+func _tabixLoader(subdir string, dbname string, data interface{}) (DataRouter, error) {
 	switch v := data.(type) {
 	default:
 		log.Printf("unexpected type %T\n", v)
 		return nil, errors.New(fmt.Sprintf("tabix format not support type %T", v))
 	case string:
-		return NewTabixManager(data.(string), dbname), nil //TODO
+		return NewTabixManager(subdir, data.(string), dbname), nil //TODO
 	case map[string]interface{}:
-		a := InitTabixManager(dbname)
+		a := InitTabixManager(subdir, dbname)
 		for key, val := range data.(map[string]interface{}) {
 			switch val.(type) {
 			case string:

@@ -12,7 +12,7 @@ import (
 	. "github.com/nimezhu/indexed/hic"
 )
 
-func addHicsHandle(router *mux.Router, hicMap map[string]*HiC) {
+func addHicsHandle(subdir string, router *mux.Router, hicMap map[string]*HiC) {
 	router.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
 		keys := []string{}
 		for key, _ := range hicMap {
